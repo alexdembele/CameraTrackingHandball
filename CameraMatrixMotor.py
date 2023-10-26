@@ -12,6 +12,9 @@ class CameraEngine:
         self.Center=np.zeros(3)
 
     def computeMatrix(self):
+        self.P = np.hstack((np.eye(3),np.reshape(self.Center,(3,1))))
+        self.P = self.K @ self.RotationRoll @ self.RotationTilt @ self.RotationPan @  self.P
+
 
     def setRoll(self,roll):
         R=np.array([[np.cos(roll),-np.sin(roll),0],[np.sin(roll),np.cos(roll),0],[0,0,1]],dtype=np.float32)
@@ -32,5 +35,12 @@ class CameraEngine:
         self.Center[1]=coords[1]
         self.Center[2]=coords[2]
         self.computeMatrix()
+
+    def setCalibration(self,f1,f2,a1,a2):
+        self.K = np.array([[f1,0,a1],[0,f2,a2],[0,0,1]],dtype=np.float32)
+        self.computeMatrix()
+
+    def keyboardControl(self):
+
 
 
