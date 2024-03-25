@@ -17,7 +17,7 @@ class CameraEngine:
 
 
     def setRoll(self,roll):
-        R=np.array([[np.cos(roll),-np.sin(roll),0],[np.sin(roll),np.cos(roll),0],[0,0,1]],dtype=np.float32)
+        self.RotationRoll=np.array([[np.cos(roll),-np.sin(roll),0],[np.sin(roll),np.cos(roll),0],[0,0,1]],dtype=np.float32)
         self.computeMatrix()
 
 
@@ -41,6 +41,7 @@ class CameraEngine:
         self.computeMatrix()
 
     def keyboardControl(self):
+        pass
 
 
 
