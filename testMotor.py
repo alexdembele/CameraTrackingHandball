@@ -140,7 +140,10 @@ longueur=1900
 pan=1.117550186681535
 tilt=-3.616576076205223
 roll=-1.3320352851220814
-
+Camera.setPan(pan)
+Camera.setRoll(roll)
+Camera.setTilt(tilt)
+print("P",Camera.P)
 
 ### minimisation scipy
 
