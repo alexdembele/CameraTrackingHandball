@@ -6,7 +6,7 @@ Le but de ce github est de tester des méthodes pour repérer un terrain de hand
 
 Cette partie contient un code python faisant de l'odométrie visuelle et une triangulation pour reconstruire un nuage de point 3D représentant le terrain. Il a besoin d'une librairie associé et des poids d'un réseau yolov8, ainsi qu'une vidéo et d'un fichier contenant la calibration caméra; Il suffit d'exécuter le code pour le faire tourner. Pour ne pas tenit compte des nuages de point3D, il suffit de commenter la ligne  correspondante dans le main. Ce code est une adaptation d'un [git](https://github.com/niconielsen32/ComputerVision/tree/master/VisualOdometry)
 
-***ROS ***
+***ROS***
 
 Ce git contient des noeuds ROS, il suffit de les télécharger et de recompiler le catkin_ws, pas besoin de compiler les noeuds car ils sont en python. Il faudrait passer du temps pour les convertir en c++ pour les optimiser en temps.
 
