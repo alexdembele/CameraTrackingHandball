@@ -1,34 +1,33 @@
+#!/usr/bin/env python3
+
+import rospy
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
+from std_msgs.msg import Float64MultiArray
 import os
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
-from ultralytics import YOLO
-import time
-model = YOLO("yolov8n.pt")
-
-#from lib.visualization import plotting
 from lib.visualization.video import play_trip
 
 from tqdm import tqdm
 
 
-class VisualOdometry():
-    def __init__(self, data_dir):
-        self.K, self.P = self._load_calib(os.path.join(data_dir, 'calib.txt'))
-        print(self.P,"\n",self.K)
-        print("==========================")
-        self.cap = cv2.VideoCapture(os.path.join(data_dir, 'video.mp4'))
+class VisualOdometryNode():
+    def __init__(self):
+
+        rospy.init_node('visual_odometry_node')
+        print(os.listdir())
+        self.bridge = CvBridge()
+        self.image_sub = rospy.Subscriber("/camera/image_raw", Image, self.image_callback)
+        self.pose_pub = rospy.Publisher("/camera/pose", Float64MultiArray, queue_size=10)
+        self.K, self.P = self._load_calib("/home/dembele/catkin_ws/src/visual_odometry/config/calib.txt")
         self.orb = cv2.ORB_create(3000)
         self.images = []
         FLANN_INDEX_LSH = 6
         index_params = dict(algorithm=FLANN_INDEX_LSH, table_number=6, key_size=12, multi_probe_level=1)
         search_params = dict(checks=50)
         self.flann = cv2.FlannBasedMatcher(indexParams=index_params, searchParams=search_params)
-        self.cur_pose = np.array([[ 7.57556213e+02, -3.46027283e+02, -1.90984650e+02, -1.46613289e+04],
- [ 1.04178801e+01, -2.15563369e+00, -3.93643280e+02,  2.93432174e+03],
- [ 7.99507976e-01,  4.57323700e-01, -3.89412344e-01, -1.15028897e+01],[ 0.,0.,0.,1. ]])
-        self.prec_pose = np.eye(4)
-
+        self.cur_pose = np.array([[7.57556213e+02, -3.46027283e+02, -1.90984650e+02, -1.46613289e+04], [1.04178801e+01, -2.15563369e+00, -3.93643280e+02, 2.93432174e+03],[ 7.99507976e-01, 4.57323700e-01, -3.89412344e-01, -1.15028897e+01],[0.,0.,0.,1.]])
     @staticmethod
     def _load_calib(filepath):
         """
@@ -68,7 +67,43 @@ class VisualOdometry():
         T[:3, :3] = R
         T[:3, 3] = t
         return T
+    
+    def image_callback(self, data):
+        try:
+            cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
+        except CvBridgeError as e:
+            print(e)
+            return
 
+        self.process_image(cv_image)
+    
+    def process_image(self, cv_image):
+        if not hasattr(self, 'prev_image'):
+            self.prev_image = cv_image
+            return
+        q1, q2 = self.get_matches(self.prev_image, cv_image)
+        transf = self.get_pose(q1, q2)
+        #print(transf)
+        
+        #anti erreur
+        tampon  = np.matmul(self.cur_pose, np.linalg.inv(transf))
+        print(tampon)
+        if not np.isnan(tampon[0,0]):
+            
+
+            self.cur_pose = tampon
+        #print(extract_rotation_angles(self.cur_pose))
+        cv2.imshow("prev", self.prev_image)
+        cv2.waitKey(1)
+        self.prev_image = cv_image
+        cv2.imshow("cur", cv_image)
+        
+        # Publish the current pose
+        pose_msg = Float64MultiArray()
+        pose_msg.data = self.cur_pose.flatten().tolist()
+        self.pose_pub.publish(pose_msg)
+       
+        
 
     def get_matches(self, image_prec, image_cur):
         """
@@ -84,30 +119,12 @@ class VisualOdometry():
         q1 (ndarray): The good keypoints matches position in i-1'th image
         q2 (ndarray): The good keypoints matches position in i'th image
         """
-        def getDescriptor(img,kp):
-            img=cv2.resize(img,(640,360))
-            results=model(img)
-            mask=np.zeros((360,640))
-            for box in results[0].boxes.data:
-                if box[5]<0.5:
-                    cv2.rectangle(mask,(int(box[0]),int(box[1])),(int(box[2]),int(box[3])),255,-1)
-            gray =  cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-            pts, desc = kp.detectAndCompute(gray,None)
-            pT=[]
-            dT=[]
-
-            for p in range(len(pts)):
-                if  mask[int(pts[p].pt[1])][int(pts[p].pt[0])]<20:
-                    pT.append(pts[p])
-                    dT.append(desc[p])
-            desc=np.array(dT)
-            pts=tuple(pT)
-            return pts,desc
         # Find the keypoints and descriptors with ORB
-        kp1, des1 = getDescriptor(image_prec,self.orb)
-        kp2, des2 = getDescriptor(image_cur, self.orb)
+        kp1, des1 = self.orb.detectAndCompute(image_prec, None)
+        kp2, des2 = self.orb.detectAndCompute(image_cur, None)
         # Find matches
         matches = self.flann.knnMatch(des1, des2, k=2)
+
         # Find the matches there do not have a to high distance
         good = []
         try:
@@ -123,8 +140,8 @@ class VisualOdometry():
                  flags = 2)
 
         img3 = cv2.drawMatches(image_cur, kp1, image_prec,kp2, good ,None,**draw_params)
-        cv2.imshow("image", img3)
-        cv2.waitKey(200)
+        #cv2.imshow("image", img3)
+        #cv2.waitKey(1)
 
         # Get the image points form the good matches
         q1 = np.float32([kp1[m.queryIdx].pt for m in good])
@@ -232,78 +249,16 @@ def extract_rotation_angles(calibration_matrix):
 
     return [theta_x, theta_y, theta_z]
 
-def visualize_map(points3d):
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    # Afficher les points 3D de la carte
-    ax.scatter(points3d[:, 0], points3d[:, 1], points3d[:, 2], c='b', marker='o')
-
-
-
-
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    ax.set_title('3D Map ')
-
-    plt.show()
-
 
 def main():
-    data_dir = "videoGD"  # Try KITTI_sequence_2 too
-    vo = VisualOdometry(data_dir)
+    vo_node = VisualOdometryNode()
+    rate = rospy.Rate(30)  # Définit la fréquence à 1 Hz (une itération par seconde)
+    while not rospy.is_shutdown():
+        # Votre code ici
+        rate.sleep()
 
 
 
-    gt_path = []
-    estimated_path = []
-    ANGLE = []
-    ret,img_prec = vo.cap.read()
-    img_prec=cv2.resize(img_prec,(640,360))
-    vo.images.append(img_prec)
-
-    #Lecture vidéo
-    i=0
-    while True:
-        i+=1
-        a=time.time()
-        ret,img_cur = vo.cap.read()
-        img_cur=cv2.resize(img_cur,(640,360))
-        vo.images.append(img_cur)
-
-        q1, q2 = vo.get_matches(img_prec,img_cur)
-        transf = vo.get_pose(q1, q2)
-        vo.cur_pose = np.matmul(vo.cur_pose, np.linalg.inv(transf))
-
-        print("pose",vo.cur_pose)
-        print("q1",q1)
-        #print(extract_rotation_angles(cur_pose))
-        ANGLE.append(extract_rotation_angles(vo.cur_pose))
-        # gt_path.append((gt_pose[0, 3], gt_pose[2, 3]))
-        # estimated_path.append((cur_pose[0, 3], cur_pose[2, 3]))
-
-        #Points3D
-        if i >=2:
-
-            points4D_homogeneous = cv2.triangulatePoints(vo.prec_pose[:3], vo.cur_pose[:3], q1.T, q2.T)
-            points3D_homogeneous = points4D_homogeneous / points4D_homogeneous[3]
-            points3D = points3D_homogeneous[:3].T
-            #visualize_map(points3D)
-        img_prec = img_cur #pas oublier d'actualiser l'image précédente.
-        vo.prec_pose=vo.cur_pose
-        print("temps",time.time()-a)
-        #Pour quitter la boucle
-        k = cv2.waitKey(60) & 0xFF
-        if k == 27:
-            break
-        elif k == ord('q'):
-            break
-
-
-    print(ANGLE)
-
-    cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
