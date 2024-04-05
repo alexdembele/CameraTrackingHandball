@@ -1,0 +1,14 @@
+<!-- my_usb_cam_viewer.launch -->
+<launch>
+  <!-- Launch usb_cam node -->
+  <arg name="image_view" default="false" />
+
+  <include file="$(find usb_cam)/launch/usb_cam.launch">
+    <arg name="image_view" value="$(arg image_view)" />
+  
+  </include>
+
+  <!-- Launch your custom node -->
+  <node name="pythonViewer" pkg="my_usb_cam_viewer" type="python_viewer.py" output="screen">
+  </node>
+</launch>

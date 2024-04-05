@@ -1,0 +1,8 @@
+<launch>
+    
+
+    <!-- Lancez votre nœud en lui passant le chemin de la vidéo comme argument -->
+    <node name="video_publisher" pkg="video_publisher" type="video_publisher.py" output="screen">
+        
+    </node>
+</launch>
