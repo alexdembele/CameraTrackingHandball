@@ -289,7 +289,7 @@ def main():
             points4D_homogeneous = cv2.triangulatePoints(vo.prec_pose[:3], vo.cur_pose[:3], q1.T, q2.T)
             points3D_homogeneous = points4D_homogeneous / points4D_homogeneous[3]
             points3D = points3D_homogeneous[:3].T
-            #visualize_map(points3D)
+            visualize_map(points3D)
         img_prec = img_cur #pas oublier d'actualiser l'image précédente.
         vo.prec_pose=vo.cur_pose
         print("temps",time.time()-a)
