@@ -1,5 +1,5 @@
 # CameraTrackingHandball
-Le but de ce github est de tester des méthodes pour repérer un terrain de handball dans l'espace à partir d'une vidéo et de tracker les joueurs dans le but de mesurer la distacne qu'ils parcourent.
+Le but de ce github est de tester des méthodes pour repérer un terrain de handball dans l'espace à partir d'une vidéo et de tracker les joueurs dans le but de mesurer la distance qu'ils parcourent.
 
 
 ***VisualOdometryPython***
@@ -26,7 +26,7 @@ Ce git contient des noeuds ROS, il suffit de les télécharger et de recompiler 
 
 ***CameraMatrixMotor***
 
-Cette partie impléméente une classe permettant de simplifier la gestion de la matrice caméra. Elle peut notamment servir à chercher la matrice caméra initiale à l'aide du code joint. On peut chercher à plaquer un terrain standard sur l'image de la vidéo avec le clavier les touches "z,s,q,d,l,m" permettent de gérer les rotations. 
+Cette partie implémente une classe permettant de simplifier la gestion de la matrice caméra. Elle peut notamment servir à chercher la matrice caméra initiale à l'aide du code joint. On peut chercher à plaquer un terrain standard sur l'image de la vidéo avec le clavier les touches "z,s,q,d,l,m" permettent de gérer les rotations. 
 
 
 
